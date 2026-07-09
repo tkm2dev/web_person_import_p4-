@@ -463,17 +463,51 @@ function folderId_() {
   return CONFIG.PROVINCE_FOLDER_ID || propGet_(K_FOLDER_ID, '');
 }
 
+/** รับได้ทั้ง id เปล่าๆ และ URL เต็มของโฟลเดอร์ */
+function extractFolderId_(raw) {
+  const s = String(raw || '').trim();
+  const m = s.match(/\/folders\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : s.split('?')[0];
+}
+
 /**
- * เก็บ id โฟลเดอร์ลง Script Properties รันครั้งเดียวหลังวางสคริปต์
+ * เก็บ id โฟลเดอร์ลง Script Properties
  *
- *   setProvinceFolderId('14wXv...')
+ * ตัวแก้ไข Apps Script กด "เรียกใช้" ฟังก์ชันที่รับพารามิเตอร์ไม่ได้ (จะได้ undefined)
+ * จึงมี 3 ทางเลือก — ดูข้อความ error ด้านล่าง
  */
 function setProvinceFolderId(id) {
-  const v = String(id || '').trim();
-  if (!v) throw new Error('ต้องระบุ id โฟลเดอร์');
+  const v = extractFolderId_(id);
+  if (!v) {
+    throw new Error(
+      'ต้องระบุ id โฟลเดอร์ — กด "เรียกใช้" ตรงๆ ไม่ได้เพราะฟังก์ชันนี้รับพารามิเตอร์\n' +
+      'เลือกทางใดทางหนึ่ง:\n' +
+      '  1) การตั้งค่าโปรเจกต์ > พร็อพเพอร์ตี้ของสคริปต์ > เพิ่ม PROVINCE_FOLDER_ID = <id>\n' +
+      '  2) เปิดไฟล์ ภ.4 แล้วใช้เมนู  ภ.4 > ตั้งค่าโฟลเดอร์ไฟล์จังหวัด\n' +
+      '  3) แก้ CONFIG.PROVINCE_FOLDER_ID ในไฟล์นี้ (ห้าม commit ค่านั้นลง repo)');
+  }
   DriveApp.getFolderById(v);   // โยน error ทันทีถ้า id ผิดหรือไม่มีสิทธิ์
   P.setProperty(K_FOLDER_ID, v);
-  Logger.log('เก็บ id โฟลเดอร์แล้ว');
+  Logger.log('เก็บ id โฟลเดอร์แล้ว: ' + DriveApp.getFolderById(v).getName());
+}
+
+/** เมนู ภ.4 > ตั้งค่าโฟลเดอร์ไฟล์จังหวัด — กรอกผ่านหน้าต่าง ไม่ต้องแตะซอร์ส */
+function promptProvinceFolderId() {
+  const ui = SpreadsheetApp.getUi();
+  const cur = folderId_();
+  const res = ui.prompt(
+    'ตั้งค่าโฟลเดอร์ไฟล์จังหวัด',
+    'วาง id หรือ URL ของโฟลเดอร์\n(drive.google.com/drive/folders/<id>)' +
+    (cur ? '\n\nค่าปัจจุบัน: ' + cur : ''),
+    ui.ButtonSet.OK_CANCEL);
+
+  if (res.getSelectedButton() !== ui.Button.OK) return;
+  try {
+    setProvinceFolderId(res.getResponseText());
+    ui.alert('บันทึกแล้ว: ' + DriveApp.getFolderById(folderId_()).getName());
+  } catch (e) {
+    ui.alert('ผิดพลาด: ' + e.message);
+  }
 }
 
 /**
@@ -515,8 +549,9 @@ function resolveProvinceFiles_() {
   if (need.length) {
     const fid = folderId_();
     if (!fid) {
-      throw new Error('ยังไม่ได้ตั้งโฟลเดอร์ — รัน setProvinceFolderId(\'<folder id>\') ก่อน ' +
-                      '(จังหวัดที่ยังหาไม่เจอ: ' + need.join(', ') + ')');
+      throw new Error('ยังไม่ได้ตั้งโฟลเดอร์ไฟล์จังหวัด (ยังหาไม่เจอ: ' + need.join(', ') + ')\n' +
+                      'ตั้งที่ การตั้งค่าโปรเจกต์ > พร็อพเพอร์ตี้ของสคริปต์ > PROVINCE_FOLDER_ID\n' +
+                      'หรือเมนู  ภ.4 > ตั้งค่าโฟลเดอร์ไฟล์จังหวัด');
     }
     const folder = DriveApp.getFolderById(fid);
     const sheets = [];
@@ -689,7 +724,10 @@ function auditSharing() {
  */
 function lockFolder() {
   const fid = folderId_();
-  if (!fid) throw new Error('ยังไม่ได้ตั้งโฟลเดอร์ — รัน setProvinceFolderId(\'<folder id>\') ก่อน');
+  if (!fid) {
+    throw new Error('ยังไม่ได้ตั้งโฟลเดอร์ไฟล์จังหวัด — ตั้งที่ พร็อพเพอร์ตี้ของสคริปต์ ' +
+                    'คีย์ PROVINCE_FOLDER_ID หรือเมนู ภ.4 > ตั้งค่าโฟลเดอร์ไฟล์จังหวัด');
+  }
   const f = DriveApp.getFolderById(fid);
   const before = String(f.getSharingAccess());
   f.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
@@ -1317,6 +1355,8 @@ function onOpenMaster(e) {
     .addSeparator()
     .addItem('สร้าง/รีเฟรชแท็บภาพรวม', 'installOverview')
     .addItem('สร้างไฟล์ส่งส่วนกลาง (.xlsx)', 'exportForCentral')
+    .addSeparator()
+    .addItem('ตั้งค่าโฟลเดอร์ไฟล์จังหวัด', 'promptProvinceFolderId')
     .addToUi();
 }
 
