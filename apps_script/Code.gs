@@ -170,42 +170,18 @@ const HEADER_BG = '#1f3864';
 const HEADER_BG_REQUIRED = '#7b2d26';
 const MISSING_REQUIRED_BG = '#fce8e6';
 
-/** ช่องแสดงผลการดึงข้อมูล ถัดจากปุ่มบนแท็บ ภาพรวม */
-const SYNC_STATUS_CELL = 'E2';
-
 /**
- * ปุ่ม "ดึงข้อมูลล่าสุด" — รูป PNG ที่ผูกกับ syncFromButton() ผ่าน OverGridImage.assignScript()
- * เป็นปุ่มกดจริง ไม่ใช่ checkbox และไม่ต้องพึ่ง onEdit trigger
+ * "ปุ่ม" ดึงข้อมูลบนแท็บ ภาพรวม — C2 เป็นป้ายจัดสไตล์ D2 เป็น checkbox E2 เป็นสถานะ
  *
- * สร้างจาก scripts/make_button.py (Pillow + ฟอนต์ Leelawadee UI) ขนาด 520x88 ย่อแสดงที่ 260x44
+ * ทำไมไม่ใช้รูป + OverGridImage.assignScript() ที่กดได้จริง:
+ * assignScript หาฟังก์ชันจาก "สคริปต์ที่ผูกกับสเปรดชีต" (container-bound) เท่านั้น
+ * โปรเจกต์นี้เป็น standalone กดแล้วจะขึ้น "ไม่พบฟังก์ชันของสคริปต์"
+ *
+ * จะย้ายไป container-bound ก็ได้ แต่ makeCopy() จะพ่วงโค้ดทั้งระบบไปกับ
+ * ไฟล์ที่ส่งส่วนกลางและชุดสำรองรายวันทุกชุด — ไม่คุ้ม
  */
-const SYNC_BUTTON_PNG_B64 = [
-  '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',
-].join('');
+const SYNC_BUTTON_CELL = 'D2';
+const SYNC_STATUS_CELL = 'E2';
 
 // ════════════════════════════════════════════════════════════════════
 // 3. ตัวช่วย
@@ -1073,21 +1049,11 @@ function installOverview() {
     const master = SpreadsheetApp.openById(masterId);
     buildOverview_(master, readHeaders_(master));
     appendHistory_(master, propJson_(K_COUNTS, null));
-    removeLegacyEditTrigger_();
     Logger.log('สร้างแท็บ ภาพรวม เรียบร้อย: ' + masterUrl_());
   } finally {
     lock.releaseLock();
   }
-}
-
-/** ปุ่มเป็นรูปที่ assignScript แล้ว ไม่ต้องใช้ onEdit trigger อีก — ลบของเก่าทิ้ง */
-function removeLegacyEditTrigger_() {
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'onEditMaster') {
-      ScriptApp.deleteTrigger(t);
-      Logger.log('ลบ trigger onEditMaster ที่ไม่ใช้แล้ว');
-    }
-  });
+  ensureEditTrigger_();   // checkbox D2 ต้องมี trigger ถึงจะทำงาน
 }
 
 /**
@@ -1121,7 +1087,6 @@ function fillOverviewTables_(sh, headersByTab) {
   sh.getRange('B2').setValue(propGet_(K_SYNC_AT, '(ยังไม่เคยซิงค์)'));
 
   insertSyncButton_(sh);
-  sh.getRange(SYNC_STATUS_CELL).setValue('กดปุ่มเพื่อดึงข้อมูลจากทั้ง 12 จังหวัด');
 
   // ---- ตารางจำนวนข้อมูล: จังหวัด × ประเภท
   const provCol = {};
@@ -1210,40 +1175,22 @@ function fillOverviewTables_(sh, headersByTab) {
   return sh;
 }
 
-/**
- * วางปุ่มกดจริงบนแท็บ ภาพรวม
- *
- * OverGridImage.assignScript() ผูกรูปเข้ากับฟังก์ชัน กดแล้วรันทันที
- * ไม่ต้องใช้ checkbox และไม่ต้องมี onEdit trigger คอยดัก
- */
+/** ป้าย + checkbox ที่ onEditMaster ดักไว้ ทำหน้าที่เป็นปุ่มดึงข้อมูล */
 function insertSyncButton_(sh) {
-  sh.getImages().forEach(function (img) { img.remove(); });
-  sh.setRowHeight(2, 50);
+  sh.setRowHeight(2, 40);
 
-  const blob = Utilities.newBlob(Utilities.base64Decode(SYNC_BUTTON_PNG_B64), 'image/png', 'sync.png');
-  sh.insertImage(blob, 3, 2, 4, 3)   // คอลัมน์ C แถว 2
-    .setWidth(260)
-    .setHeight(44)
-    .assignScript('syncFromButton');
-}
+  sh.getRange('C2').setValue('↻ ดึงข้อมูลล่าสุด')
+    .setBackground(HEADER_BG).setFontColor('#ffffff').setFontWeight('bold')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true);
 
-/**
- * ฟังก์ชันที่ผูกกับปุ่ม — ต้องเป็นฟังก์ชันระดับบนสุด ไม่รับพารามิเตอร์
- * ใช้ sync แบบ incremental (~10 วิ) ไม่ใช่ force rebuild (~106 วิ) กดบ่อยก็ไม่กินโควตา
- */
-function syncFromButton() {
-  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(OVERVIEW_TAB);
-  if (!sh) return;
-  const status = sh.getRange(SYNC_STATUS_CELL);
+  sh.getRange(SYNC_BUTTON_CELL).insertCheckboxes().setValue(false)
+    .setHorizontalAlignment('center').setVerticalAlignment('middle')
+    .setBackground('#dce6f5')
+    .setNote('ติ๊กเพื่อดึงข้อมูลจากทั้ง 12 จังหวัด ระบบจะเคลียร์ติ๊กให้เอง');
 
-  status.setValue('กำลังดึงข้อมูล...');
-  SpreadsheetApp.flush();
-  try {
-    status.setValue(runSync_(false) || 'เสร็จ');
-  } catch (e) {
-    status.setValue('ผิดพลาด: ' + e.message);
-    throw e;
-  }
+  sh.getRange(SYNC_STATUS_CELL)
+    .setValue('ติ๊กช่อง D2 เพื่อดึงข้อมูลจากทั้ง 12 จังหวัด')
+    .setVerticalAlignment('middle');
 }
 
 /**
@@ -1362,6 +1309,48 @@ function onOpenMaster(e) {
 
 function syncNow() { return runSync_(true); }
 function syncAuto() { return runSync_(false); }
+
+/**
+ * ดัก checkbox D2 บนแท็บ ภาพรวม แล้วดึงข้อมูล
+ *
+ * ต้องเป็น installable trigger ไม่ใช่ simple onEdit เพราะต้องใช้สิทธิ์ Drive/LockService
+ * ใช้ sync แบบ incremental (~10 วิ) ไม่ใช่ force rebuild (~106 วิ) กดบ่อยก็ไม่กินโควตา
+ * ถ้าอยาก rebuild เต็ม ใช้เมนู ภ.4 > รวมข้อมูลเดี๋ยวนี้
+ */
+function onEditMaster(e) {
+  if (!e || !e.range) return;
+  let sh;
+  try {
+    sh = e.range.getSheet();
+    if (sh.getName() !== OVERVIEW_TAB) return;
+    if (e.range.getA1Notation() !== SYNC_BUTTON_CELL) return;
+    if (e.range.getValue() !== true) return;
+  } catch (err) {
+    return;
+  }
+
+  e.range.setValue(false);   // เคลียร์ติ๊กทันที กันกดซ้ำระหว่างรัน
+  const status = sh.getRange(SYNC_STATUS_CELL);
+  status.setValue('กำลังดึงข้อมูล...');
+  SpreadsheetApp.flush();
+
+  try {
+    status.setValue(runSync_(false) || 'เสร็จ');
+  } catch (err) {
+    status.setValue('ผิดพลาด: ' + err.message);
+    Logger.log('onEditMaster: ' + err);
+  }
+}
+
+/** ติดตั้ง onEdit trigger ให้ปุ่มทำงาน (ไม่ซ้ำถ้ามีอยู่แล้ว) */
+function ensureEditTrigger_() {
+  const masterId = propGet_(K_MASTER, '');
+  if (!masterId) return;
+  const has = ScriptApp.getProjectTriggers().filter(function (t) {
+    return t.getHandlerFunction() === 'onEditMaster';
+  }).length > 0;
+  if (!has) ScriptApp.newTrigger('onEditMaster').forSpreadsheet(masterId).onEdit().create();
+}
 
 /** คืนข้อความสรุปผล เพื่อให้ปุ่มบนแท็บ ภาพรวม เอาไปแสดงได้ */
 function runSync_(force) {
@@ -1717,13 +1706,13 @@ function installTriggers() {
   const masterId = propGet_(K_MASTER, '');
   if (!masterId) throw new Error('ยังไม่มีไฟล์ ภ.4 — รัน bindExisting() ก่อน');
 
-  // onEditMaster อยู่ในรายการเพื่อ "ลบ" ของเก่าเท่านั้น ไม่สร้างใหม่ — ปุ่มใช้ assignScript แทนแล้ว
   const MINE = ['syncAuto', 'onOpenMaster', 'onEditMaster', 'snapshotMaster'];
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (MINE.indexOf(t.getHandlerFunction()) !== -1) ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('syncAuto').timeBased().everyMinutes(CONFIG.SYNC_INTERVAL_MINUTES).create();
   ScriptApp.newTrigger('onOpenMaster').forSpreadsheet(masterId).onOpen().create();
+  ScriptApp.newTrigger('onEditMaster').forSpreadsheet(masterId).onEdit().create();
   ScriptApp.newTrigger('snapshotMaster').timeBased().atHour(1).everyDays(1).create();
 }
 
